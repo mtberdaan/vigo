@@ -6,7 +6,18 @@ import (
   "os"
 )
 
+func enableRawMode() {
+  // get terminal state
+
+  // make adjustments
+
+  // set terminal state
+
+}
+
 func main() {
+  enableRawMode()
+
   reader := bufio.NewReader(os.Stdin)
 
   for {
@@ -15,6 +26,11 @@ func main() {
       // if error including EOF, break
       break
     }
+    if c == 'q' {
+      // if 'q' is entered, break
+      break
+    }
+
     fmt.Printf("%c", c)
   }
 
