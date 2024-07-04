@@ -35,3 +35,8 @@
 .vscode/
 .settings/
 *.code-workspace
+
+# vim swap files
+*.swp
+*.swo
+
