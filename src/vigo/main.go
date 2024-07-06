@@ -1,30 +1,54 @@
 package main
 
 import (
-  "os"
+	"os"
 
-  "golang.org/x/term"
+	"golang.org/x/term"
 )
 
 type editorConfig struct {
-  screenrows int
-  screencols int
+	originTermState *term.State
+	screenrows      int
+	screencols      int
 }
 
 var E editorConfig
 
-func getTermSize(fd int) editorConfig {
-  c, r, err := term.GetSize(fd)
-  
-  if err != nil {
-    panic(err)
-  }
+/*** init ***/
 
-  return editorConfig{screenrows: r, screencols: c} 
+func (e *editorConfig) getTermSize(fd int) {
+	c, r, err := term.GetSize(fd)
+
+	if err != nil {
+		panic(err)
+	}
+
+	e.screenrows = r
+	e.screencols = c
 }
 
+func (e *editorConfig) setRawMode(fd int) {
+	originState, err := term.MakeRaw(fd)
+	if err != nil {
+		panic(err)
+	}
+
+	e.originTermState = originState
+}
+
+func (e *editorConfig) disableRawMode(fd int) {
+	term.Restore(fd, e.originTermState)
+}
+
+
 func main() {
-  E := getTermSize(int(os.Stdin.Fd()))
-  println("Rows: ", E.screenrows)
-  println("Cols: ", E.screencols)
+	terminal := int(os.Stdin.Fd())
+  
+  E.getTermSize(terminal)
+  E.setRawMode(terminal)
+
+	println("Rows: ", E.screenrows)
+	println("Cols: ", E.screencols)
+
+	E.disableRawMode(terminal)
 }
