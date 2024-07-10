@@ -1,13 +1,16 @@
 package main
 
 import (
+	"fmt"
 	"os"
+	"unicode"
 
 	"golang.org/x/term"
+	"golang.org/x/sys/unix"
 )
 
 type editorConfig struct {
-	originTermState *term.State
+	originTermState unix.Termios 
 	screenrows      int
 	screencols      int
 }
@@ -28,27 +31,48 @@ func (e *editorConfig) getTermSize(fd int) {
 }
 
 func (e *editorConfig) setRawMode(fd int) {
-	originState, err := term.MakeRaw(fd)
-	if err != nil {
-		panic(err)
-	}
+  termios, err := unix.IoctlGetTermios(fd, unix.TIOCGETA)
+  if err != nil {
+    panic(err)
+  } 
 
-	e.originTermState = originState
+  e.originTermState = *termios
+
+  termios.Lflag &^= unix.ECHO | unix.ICANON
+
+  if err := unix.IoctlSetTermios(fd, unix.TIOCSETA, termios); err != nil {
+    panic(err)
+  }
+
+
 }
 
 func (e *editorConfig) disableRawMode(fd int) {
-	term.Restore(fd, e.originTermState)
+  err := unix.IoctlSetTermios(fd, unix.TIOCSETA, &e.originTermState)
+  if err != nil {
+    panic(err)
+  }
+
 }
 
-
 func main() {
-	terminal := int(os.Stdin.Fd())
-  
-  E.getTermSize(terminal)
-  E.setRawMode(terminal)
+	fd := int(os.Stdin.Fd())
 
-	println("Rows: ", E.screenrows)
-	println("Cols: ", E.screencols)
+	E.getTermSize(fd)
+	E.setRawMode(fd)
 
-	E.disableRawMode(terminal)
+	buf := make([]byte, 1)
+	for {
+		_, err := os.Stdin.Read(buf)
+		if err != nil || buf[0] == 'q' {
+			break
+		}
+		if unicode.IsControl(rune(buf[0])) {
+			fmt.Println("%d\n", buf[0])
+		} else {
+			fmt.Println("%d ('%c')\n", buf[0], buf[0])
+		}
+	}
+
+	E.disableRawMode(fd)
 }
